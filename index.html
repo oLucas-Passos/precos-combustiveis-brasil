@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Preços de Combustíveis no Brasil · Análise 2013–2026</title>
+  <meta name="description" content="Análise estatística dos preços de gasolina, etanol, diesel e GLP no Brasil com dados da ANP e IPCA: preço real, volatilidade, sazonalidade, paridade do etanol e teto do ICMS.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-in">
+      <span class="brand">combustiveis<span class="dim">/</span>br</span>
+      <nav aria-label="Seções">
+        <a href="#s1">Preço real</a>
+        <a href="#s2">Volatilidade</a>
+        <a href="#s3">Sazonalidade</a>
+        <a href="#s4">Etanol</a>
+        <a href="#s5">Dispersão</a>
+        <a href="#s6">ICMS</a>
+        <a href="#s7">Estados</a>
+        <a href="#metodo">Método</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow">Relatório analítico · dados públicos ANP e BCB</p>
+      <h1>Preços de combustíveis no Brasil, 2013–<span data-ano-fim></span></h1>
+      <p class="lead">Série mensal por estado de gasolina comum, etanol hidratado, diesel S10 e GLP, deflacionada pelo IPCA. Análise de tendência real, volatilidade por regime de preços da Petrobras, sazonalidade, competitividade do etanol, dispersão regional e quebra estrutural associada ao teto do ICMS.</p>
+      <dl class="meta">
+        <div><dt>Período</dt><dd data-periodo></dd></div>
+        <div><dt>Observações</dt><dd data-registros></dd></div>
+        <div><dt>Unidades</dt><dd>27 UFs · 4 produtos</dd></div>
+        <div><dt>Preço real</dt><dd>R$ de <span data-base></span></dd></div>
+        <div><dt>Reprodutibilidade</dt><dd><a href="https://github.com/oLucas-Passos/precos-combustiveis-brasil" target="_blank" rel="noopener">código e notebook</a></dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <main class="wrap">
+    <section aria-label="Indicadores">
+      <div class="kpis" id="kpis"></div>
+    </section>
+
+    <section class="block" id="s1">
+      <header class="block-head">
+        <div>
+          <p class="num">01</p>
+          <h2>Evolução do preço médio nacional</h2>
+          <p class="hint">Média ponderada pelo número de postos pesquisados. Faixa sombreada: período de paridade de importação (PPI). Linhas verticais: eventos de referência.</p>
+        </div>
+        <div class="controls">
+          <div class="seg" id="segEscala" role="group" aria-label="Escala"></div>
+          <div class="seg" id="segProdutoEvo" role="group" aria-label="Combustível"></div>
+        </div>
+      </header>
+      <div class="chart h-lg"><canvas id="chEvolucao" aria-label="Evolução do preço médio nacional"></canvas></div>
+      <div class="finding" id="findEvo"></div>
+    </section>
+
+    <section class="block" id="s2">
+      <header class="block-head">
+        <div>
+          <p class="num">02</p>
+          <h2>Volatilidade por regime de preços</h2>
+          <p class="hint">Desvio padrão dos retornos log mensais, anualizado (×√12). Média nacional.</p>
+        </div>
+      </header>
+      <div class="grid-2">
+        <div class="chart h-md"><canvas id="chVolRegime" aria-label="Volatilidade por regime"></canvas></div>
+        <div class="chart h-md"><canvas id="chVolMovel" aria-label="Volatilidade móvel de 12 meses"></canvas></div>
+      </div>
+      <div class="finding" id="findVol"></div>
+    </section>
+
+    <section class="block" id="s3">
+      <header class="block-head">
+        <div>
+          <p class="num">03</p>
+          <h2>Sazonalidade</h2>
+          <p class="hint">Desvio médio do log do preço em relação a uma média móvel centrada 2×12, por mês do calendário. Barras de erro: IC 95%.</p>
+        </div>
+      </header>
+      <div class="chart h-md"><canvas id="chSaz" aria-label="Efeito sazonal por mês"></canvas></div>
+      <div class="finding" id="findSaz"></div>
+    </section>
+
+    <section class="block" id="s4">
+      <header class="block-head">
+        <div>
+          <p class="num">04</p>
+          <h2>Competitividade do etanol</h2>
+          <p class="hint">Razão preço do etanol ÷ preço da gasolina. Abaixo de 70% (paridade energética), o etanol tem menor custo por quilômetro.</p>
+        </div>
+        <label class="field">UF <select id="selUf"></select></label>
+      </header>
+      <div class="grid-2">
+        <div>
+          <div class="chart h-md"><canvas id="chRazao" aria-label="Razão etanol/gasolina na UF"></canvas></div>
+          <p class="note" id="noteUf"></p>
+        </div>
+        <div class="chart h-share"><canvas id="chShare" aria-label="Percentual de meses com etanol competitivo"></canvas></div>
+      </div>
+      <h3 class="sub">Razão média anual por UF</h3>
+      <div class="heat-wrap"><table class="heat" id="heat"></table></div>
+      <div class="legend-scale"><span>55%</span><i></i><span>85%</span></div>
+    </section>
+
+    <section class="block" id="s5">
+      <header class="block-head">
+        <div>
+          <p class="num">05</p>
+          <h2>Dispersão regional da gasolina</h2>
+          <p class="hint">Coeficiente de variação entre as 27 UFs (desvio padrão ÷ média) em cada mês, com tendência linear (MQO).</p>
+        </div>
+      </header>
+      <div class="chart h-md"><canvas id="chDisp" aria-label="Coeficiente de variação entre estados"></canvas></div>
+      <div class="finding" id="findDisp"></div>
+    </section>
+
+    <section class="block" id="s6">
+      <header class="block-head">
+        <div>
+          <p class="num">06</p>
+          <h2>Teto do ICMS (LC 194/2022): série interrompida</h2>
+          <p class="hint"><code>log p<sub>t</sub> = β₀ + β₁t + β₂D<sub>t</sub> + β₃(t−t₀)D<sub>t</sub> + ε<sub>t</sub></code>, preço real, ±12 meses de jul/2022, erros padrão HAC (Newey-West, 3 defasagens).</p>
+        </div>
+        <div class="seg" id="segIts" role="group" aria-label="Combustível"></div>
+      </header>
+      <div class="grid-2 wide-left">
+        <div class="chart h-md"><canvas id="chIts" aria-label="Regressão de série interrompida"></canvas></div>
+        <div>
+          <table class="tbl" id="tblIts"></table>
+          <h3 class="sub">Sensibilidade à janela (β₂, %)</h3>
+          <table class="tbl" id="tblRob"></table>
+        </div>
+      </div>
+      <div class="finding warn" id="findIts"></div>
+    </section>
+
+    <section class="block" id="s7">
+      <header class="block-head">
+        <div>
+          <p class="num">07</p>
+          <h2>Comparação entre estados</h2>
+          <p class="hint">Ranking no último mês e séries históricas de até 5 UFs.</p>
+        </div>
+        <div class="controls">
+          <div class="seg" id="segEscalaUf" role="group" aria-label="Escala"></div>
+          <div class="seg" id="segProdutoUf" role="group" aria-label="Combustível"></div>
+        </div>
+      </header>
+      <div class="grid-2 wide-right">
+        <div class="chart h-xl"><canvas id="chRank" aria-label="Ranking de preço por UF"></canvas></div>
+        <div>
+          <div class="chips" id="chips" role="group" aria-label="UFs selecionadas"></div>
+          <div class="chart h-lg"><canvas id="chComp" aria-label="Séries por UF"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block method" id="metodo">
+      <header class="block-head"><div><p class="num">—</p><h2>Método, fontes e limitações</h2></div></header>
+      <div class="cols">
+        <div>
+          <h3>Fontes</h3>
+          <ul>
+            <li><a href="https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/precos-revenda-e-de-distribuicao-combustiveis/serie-historica-do-levantamento-de-precos" target="_blank" rel="noopener">ANP, Levantamento de Preços de Combustíveis</a>: média mensal de revenda por UF.</li>
+            <li><a href="https://www3.bcb.gov.br/sgspub/" target="_blank" rel="noopener">BCB, SGS 433</a>: IPCA, variação mensal.</li>
+          </ul>
+          <h3>Pipeline</h3>
+          <ul>
+            <li>Pacote Python <code>combustiveis</code>: ingestão → validação → deflação → métricas → exportação.</li>
+            <li>Validação bloqueante: chave única (mês, produto, UF), faixas de preço, média dentro de [mín, máx].</li>
+            <li>26 testes automatizados (pytest) e CI no GitHub Actions.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Limitações</h3>
+          <ul>
+            <li>Médias estaduais escondem variação entre municípios e postos.</li>
+            <li>A amostra da ANP mudou ao longo do tempo; não houve pesquisa em set/2020 (lacuna mantida, sem interpolação).</li>
+            <li>Volatilidade por regime e série interrompida são associações temporais. No caso do ICMS, cortes de preço da Petrobras e queda do petróleo ocorreram no mesmo período.</li>
+            <li>A paridade de 70% é uma aproximação; o rendimento real varia por motor.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <span>Lucas Passos · <a href="https://github.com/oLucas-Passos" target="_blank" rel="noopener">github.com/oLucas-Passos</a></span>
+    <span class="mono">Licença MIT · dados públicos</span>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
