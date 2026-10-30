@@ -148,3 +148,40 @@ button:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid
 }
 
 .eventos .faixa-legenda { display: inline-block; width: 16px; height: 11px; border-radius: 2px; background: color-mix(in srgb, var(--texto-3) 22%, transparent); align-self: center; }
+
+.botao { font: inherit; font-size: 13.5px; color: var(--texto); background: var(--fundo); border: 1px solid var(--linha); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+.botao:hover { background: var(--fundo-2); }
+.cab.sub { margin-top: 26px; }
+.cab.sub h3 { margin: 0; }
+.nota { margin: 8px 0 0; font-size: 13.5px; color: var(--texto-3); max-width: 80ch; }
+.nota.antes { margin: 2px 0 8px; }
+.grafico.baixo { height: 200px; }
+
+.tabela.grande td, .tabela.grande th { padding: 8px 10px; }
+.tabela tbody tr:hover { background: var(--fundo-2); }
+.tabela td.rotulo { color: var(--texto-2); }
+.tabela .sub-info { display: block; font-size: 12px; color: var(--texto-3); }
+.ordenavel th { cursor: pointer; user-select: none; }
+.ordenavel th:hover { color: var(--texto); }
+.ordenavel th[aria-sort="ascending"]::after { content: " \2191"; }
+.ordenavel th[aria-sort="descending"]::after { content: " \2193"; }
+
+.detalhes { margin-top: 14px; }
+.detalhes summary { cursor: pointer; font-size: 14.5px; color: var(--texto-2); }
+.detalhes summary:hover { color: var(--texto); }
+.detalhes .tab-wrap { margin-top: 10px; }
+
+.calc { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px 14px; }
+.calc label { display: grid; gap: 4px; font-size: 13px; color: var(--texto-2); }
+.calc input { font: inherit; font-size: 15px; color: var(--texto); background: var(--fundo); border: 1px solid var(--linha); border-radius: 6px; padding: 6px 8px; width: 100%; font-variant-numeric: tabular-nums; }
+.citacao { font-size: 14.5px; background: var(--fundo-2); padding: 10px 12px; border-radius: 6px; }
+
+@media (max-width: 900px) {
+  .calc { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.tabela th.txt, .tabela td.txt { text-align: left; }
+.tabela.textual th, .tabela.textual td { text-align: left; white-space: normal; }
+@media (max-width: 560px) {
+  .ordenavel th:nth-child(2), .ordenavel td:nth-child(2), .ordenavel th:nth-child(3), .ordenavel td:nth-child(3) { display: none; }
+}

@@ -12,13 +12,13 @@
     <div class="wrap topo-in">
       <a class="autor" href="https://github.com/oLucas-Passos" target="_blank" rel="noopener">Lucas Passos</a>
       <nav aria-label="Seções">
+        <a href="#resumo">Resumo</a>
         <a href="#evolucao">Evolução</a>
         <a href="#volatilidade">Volatilidade</a>
-        <a href="#sazonalidade">Sazonalidade</a>
         <a href="#etanol">Etanol</a>
         <a href="#estados">Estados</a>
         <a href="#icms">ICMS</a>
-        <a href="#metodo">Método</a>
+        <a href="#dados">Dados</a>
       </nav>
     </div>
   </header>
@@ -35,6 +35,15 @@
       <div class="kpis" id="kpis"></div>
     </section>
 
+    <section id="resumo">
+      <div class="cab">
+        <h2>Números de referência</h2>
+        <button type="button" class="botao" data-csv="resumo">Baixar CSV</button>
+      </div>
+      <p class="texto antes">Média nacional mensal, ponderada pelo número de postos pesquisados. Valores reais em reais de <span data-fim></span>. IPCA acumulado no período: <span id="ipcaTotal"></span>; nos últimos 12 meses: <span id="ipca12"></span>.</p>
+      <div class="tab-wrap"><table class="tabela grande" id="tblResumo"></table></div>
+    </section>
+
     <section id="evolucao">
       <div class="cab">
         <h2>Quanto os combustíveis subiram</h2>
@@ -46,6 +55,18 @@
       <div class="grafico alto"><canvas id="chEvolucao" aria-label="Evolução do preço médio no Brasil"></canvas></div>
       <ol class="eventos" id="listaEventos"></ol>
       <p class="texto" id="txtEvo"></p>
+    </section>
+
+    <section id="anual">
+      <div class="cab">
+        <h2>Médias anuais</h2>
+        <div class="controles">
+          <div class="seg" id="segAnual" role="group" aria-label="Combustível"></div>
+          <button type="button" class="botao" data-csv="anual">Baixar CSV</button>
+        </div>
+      </div>
+      <p class="texto antes">Média dos meses de cada ano. A variação real desconta o IPCA médio do ano. O último ano é parcial (<span id="mesesUltimoAno"></span>).</p>
+      <div class="tab-wrap"><table class="tabela grande" id="tblAnual"></table></div>
     </section>
 
     <section id="volatilidade">
@@ -60,6 +81,7 @@
           <div class="grafico"><canvas id="chVolMovel" aria-label="Volatilidade móvel de 12 meses"></canvas></div>
         </div>
       </div>
+      <div class="tab-wrap"><table class="tabela" id="tblVol"></table></div>
       <p class="texto" id="txtVol"></p>
     </section>
 
@@ -68,6 +90,10 @@
       <h3>Diferença em relação à tendência, por mês do ano</h3>
       <div class="grafico"><canvas id="chSaz" aria-label="Efeito sazonal por mês"></canvas></div>
       <p class="texto" id="txtSaz"></p>
+      <details class="detalhes">
+        <summary>Ver os valores por mês</summary>
+        <div class="tab-wrap"><table class="tabela" id="tblSaz"></table></div>
+      </details>
     </section>
 
     <section id="etanol">
@@ -87,6 +113,16 @@
           <div class="grafico ranking-etanol"><canvas id="chShare" aria-label="Percentual de meses em que o etanol compensou"></canvas></div>
         </div>
       </div>
+      <h3>Calculadora</h3>
+      <div class="calc">
+        <label>Gasolina (R$/litro)<input type="number" id="cGas" step="0.01" min="0" inputmode="decimal"></label>
+        <label>Etanol (R$/litro)<input type="number" id="cEta" step="0.01" min="0" inputmode="decimal"></label>
+        <label>Consumo com gasolina (km/l)<input type="number" id="cKm" step="0.1" min="0" value="12" inputmode="decimal"></label>
+        <label>Rendimento do etanol (% da gasolina)<input type="number" id="cRend" step="1" min="1" max="100" value="70" inputmode="numeric"></label>
+        <label>Quilômetros por mês<input type="number" id="cDist" step="50" min="0" value="1000" inputmode="numeric"></label>
+      </div>
+      <p class="texto" id="cResultado"></p>
+      <p class="nota">Os preços começam com a média do estado escolhido acima. O rendimento de 70% é uma média; o valor do seu carro costuma estar no manual ou na etiqueta do Inmetro.</p>
       <h3>Relação média por ano (%)</h3>
       <div class="heat-wrap"><table class="heat" id="heat"></table></div>
       <div class="escala-cor"><span>mais vantajoso</span><i></i><span>menos vantajoso</span></div>
@@ -97,6 +133,11 @@
       <h3>Variação do preço da gasolina entre os estados (coeficiente de variação)</h3>
       <div class="grafico"><canvas id="chDisp" aria-label="Dispersão do preço entre estados"></canvas></div>
       <p class="texto" id="txtDisp"></p>
+      <div class="cab sub">
+        <h3>Média por região</h3>
+        <div class="seg" id="segRegiao" role="group" aria-label="Combustível"></div>
+      </div>
+      <div class="grafico"><canvas id="chRegiao" aria-label="Preço médio por região"></canvas></div>
     </section>
 
     <section id="icms">
@@ -114,6 +155,11 @@
         </div>
       </div>
       <p class="texto" id="txtIts"></p>
+      <details class="detalhes">
+        <summary>Ver todos os coeficientes da regressão</summary>
+        <div class="tab-wrap"><table class="tabela" id="tblCoef"></table></div>
+        <p class="nota" id="notaCoef"></p>
+      </details>
     </section>
 
     <section id="comparar">
@@ -135,6 +181,12 @@
           <div class="grafico alto"><canvas id="chComp" aria-label="Histórico de preço por estado"></canvas></div>
         </div>
       </div>
+      <div class="cab sub">
+        <h3>Tabela por estado em <span data-fim></span></h3>
+        <button type="button" class="botao" data-csv="ufs">Baixar CSV</button>
+      </div>
+      <p class="nota antes">Clique no nome de uma coluna para ordenar. Mínimo, máximo e desvio padrão se referem aos postos pesquisados no estado naquele mês, conforme a ANP.</p>
+      <div class="tab-wrap"><table class="tabela grande ordenavel" id="tblUfs"></table></div>
     </section>
 
     <section id="metodo" class="metodo">
@@ -142,18 +194,62 @@
       <div class="duas">
         <div>
           <h3>Dados</h3>
-          <p>Planilha mensal por estado do <a href="https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/precos-revenda-e-de-distribuicao-combustiveis/serie-historica-do-levantamento-de-precos" target="_blank" rel="noopener">Levantamento de Preços de Combustíveis da ANP</a> e IPCA mensal do Banco Central (série 433 do SGS). A média nacional é ponderada pelo número de postos pesquisados em cada estado.</p>
+          <p>Arquivo <code data-arquivo></code> do <a href="https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/precos-revenda-e-de-distribuicao-combustiveis/serie-historica-do-levantamento-de-precos" target="_blank" rel="noopener">Levantamento de Preços de Combustíveis da ANP</a>, com o preço médio de revenda por estado e mês, e IPCA mensal do Banco Central (série 433 do SGS). Planilha baixada em 29/10/2026, com dados até <span data-fim></span>.</p>
+          <p>A média nacional deste site é calculada a partir das médias estaduais, ponderadas pelo número de postos pesquisados. A ANP também publica uma média Brasil própria, que pode diferir em alguns centavos.</p>
           <h3>Tratamento</h3>
-          <p>O processamento é feito em Python, em um pacote com etapas separadas de leitura, validação, correção pela inflação e cálculo das métricas, coberto por testes automatizados. A ANP não fez a pesquisa em setembro de 2020; esse mês fica sem valor e os gráficos apenas ligam os pontos vizinhos.</p>
+          <p>O processamento é feito em Python, em um pacote com etapas separadas de leitura, validação, correção pela inflação e cálculo das métricas, coberto por testes automatizados. A validação interrompe o processo se houver estado desconhecido, registro duplicado, preço fora de uma faixa plausível ou média fora do intervalo entre o mínimo e o máximo informados pela ANP.</p>
+          <h3>Cobertura da amostra</h3>
+          <div class="grafico baixo"><canvas id="chCobertura" aria-label="Postos pesquisados por mês"></canvas></div>
+          <p class="nota" id="notaCobertura"></p>
         </div>
         <div>
           <h3>Métricas</h3>
-          <p>Volatilidade: desvio padrão da variação mensal do logaritmo do preço, multiplicado por raiz de 12. Sazonalidade: diferença entre o preço e sua média móvel de 12 meses, agrupada por mês, com intervalo de 95%.</p>
-          <p>Teto do ICMS: regressão do logaritmo do preço real com tendência linear, um degrau a partir de julho de 2022 e mudança de inclinação depois dele; o valor da tabela é o tamanho do degrau. Os erros padrão são de Newey-West, por causa da autocorrelação.</p>
+          <p><b>Preço real:</b> preço do mês dividido pelo número-índice do IPCA, com base 1 em <span data-fim></span>.</p>
+          <p><b>Crescimento anual médio:</b> (preço final ÷ preço inicial) elevado a 1 sobre o número de anos, menos 1.</p>
+          <p><b>Volatilidade:</b> desvio padrão da variação mensal do logaritmo do preço, multiplicado pela raiz quadrada de 12.</p>
+          <p><b>Sazonalidade:</b> diferença entre o logaritmo do preço e sua média móvel centrada de 12 meses, agrupada por mês do ano. O intervalo é a média mais ou menos 1,96 erro padrão.</p>
+          <p><b>Coeficiente de variação entre estados:</b> desvio padrão das 27 médias estaduais dividido pela média delas, em cada mês.</p>
+          <p><b>Teto do ICMS:</b> regressão do logaritmo do preço real nacional em 24 meses (12 antes e 12 depois de julho de 2022), com tendência linear, um degrau a partir de julho de 2022 e uma mudança de inclinação depois dele. A mudança no preço é exp(degrau) menos 1. Erros padrão de Newey-West com 3 defasagens.</p>
           <h3>Limitações</h3>
-          <p>As médias estaduais escondem diferenças entre cidades e postos. As comparações de volatilidade e o efeito do ICMS mostram o que mudou no período, mas não isolam uma única causa: em 2022 a Petrobras também baixou preços e o petróleo caiu.</p>
+          <p>As médias estaduais escondem diferenças entre cidades e postos. As comparações de volatilidade e o efeito do ICMS mostram o que mudou no período, mas não isolam uma única causa: em 2022 a Petrobras também baixou preços e o petróleo caiu. A regra dos 70% é uma aproximação e varia de carro para carro.</p>
         </div>
       </div>
+    </section>
+
+    <section id="dados">
+      <h2>Dados para baixar</h2>
+      <p class="texto antes">Todos os arquivos estão no repositório e podem ser usados livremente. Os arquivos do repositório usam vírgula como separador e ponto nos decimais. Os CSVs dos botões desta página usam ponto e vírgula e vírgula nos decimais, para abrir direto no Excel em português.</p>
+      <div class="tab-wrap">
+        <table class="tabela textual">
+          <thead><tr><th>Arquivo</th><th>Conteúdo</th></tr></thead>
+          <tbody>
+            <tr><td><a href="https://github.com/oLucas-Passos/precos-combustiveis-brasil/raw/main/data/processed/painel_precos.csv">painel_precos.csv</a></td><td>Painel limpo: uma linha por mês, combustível e estado, com preço nominal e real</td></tr>
+            <tr><td><a href="https://github.com/oLucas-Passos/precos-combustiveis-brasil/blob/main/data/processed/resumo.json">resumo.json</a></td><td>Todas as estatísticas mostradas nesta página</td></tr>
+            <tr><td><a href="https://github.com/oLucas-Passos/precos-combustiveis-brasil/blob/main/data/precos.json">precos.json</a></td><td>Séries usadas nos gráficos (nacional, regiões e estados)</td></tr>
+            <tr><td><a href="https://github.com/oLucas-Passos/precos-combustiveis-brasil/raw/main/data/raw/mensal-estados-desde-jan2013.xlsx">Planilha original da ANP</a></td><td>Arquivo bruto, sem alterações</td></tr>
+            <tr><td><a href="https://github.com/oLucas-Passos/precos-combustiveis-brasil/blob/main/data/raw/ipca_bcb_433.csv">ipca_bcb_433.csv</a></td><td>IPCA mensal usado na correção</td></tr>
+            <tr><td><a href="https://github.com/oLucas-Passos/precos-combustiveis-brasil/blob/main/notebooks/analise.ipynb">analise.ipynb</a></td><td>Notebook com o passo a passo da análise</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Colunas de painel_precos.csv</h3>
+      <div class="tab-wrap">
+        <table class="tabela textual">
+          <thead><tr><th>Coluna</th><th>Descrição</th><th>Unidade</th></tr></thead>
+          <tbody>
+            <tr><td><code>mes</code></td><td>Mês de referência</td><td>AAAA-MM</td></tr>
+            <tr><td><code>produto</code></td><td>gasolina (comum), etanol (hidratado), diesel (S10) ou glp (botijão de 13 kg)</td><td></td></tr>
+            <tr><td><code>regiao</code>, <code>uf</code></td><td>Região e sigla do estado</td><td></td></tr>
+            <tr><td><code>postos</code></td><td>Número de postos pesquisados</td><td>postos</td></tr>
+            <tr><td><code>preco</code></td><td>Preço médio de revenda</td><td>R$/litro ou R$/13 kg</td></tr>
+            <tr><td><code>desvio</code></td><td>Desvio padrão entre os postos</td><td>R$</td></tr>
+            <tr><td><code>preco_min</code>, <code>preco_max</code></td><td>Menor e maior preço encontrados</td><td>R$</td></tr>
+            <tr><td><code>preco_real</code></td><td>Preço corrigido pelo IPCA para reais do último mês</td><td>R$</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Como citar</h3>
+      <p class="texto antes citacao">Passos, L. Preço dos combustíveis no Brasil, 2013 a 2026. Dados da ANP e do Banco Central. Disponível em https://olucas-passos.github.io/precos-combustiveis-brasil/</p>
     </section>
   </main>
 

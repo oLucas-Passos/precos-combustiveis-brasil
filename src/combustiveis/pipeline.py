@@ -13,7 +13,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from . import config, ingestao, metricas, transformacao, validacao
+from . import config, ingestao, metricas, referencia, transformacao, validacao
 
 log = logging.getLogger("combustiveis")
 
@@ -63,6 +63,7 @@ def calcular_resumo(d: Dados) -> dict:
         "volatilidade_regime": metricas.volatilidade_por_regime(b[["gasolina", "etanol", "diesel"]])
         .drop(columns=["inicio", "fim"])
         .to_dict(orient="index"),
+        "ipca_ultimos_12m": float((1 + ingestao.ler_ipca().iloc[-12:] / 100).prod() - 1),
         "sazonalidade_etanol": metricas.sazonalidade(b["etanol"])["efeito_pct"].to_dict(),
         "its_icms": {
             p: {"mudanca_nivel_pct": r.mudanca_nivel, "ic95": r.ic95, "p_valor": r.p_valor, "n": r.n}
@@ -72,6 +73,11 @@ def calcular_resumo(d: Dados) -> dict:
             p: metricas.robustez_its(br[p])["mudanca_nivel_pct"].to_dict()
             for p in ("gasolina", "etanol", "diesel")
         },
+        "its_icms_detalhes": {p: referencia.coeficientes_its(r) for p, r in its.items()},
+        "estatisticas": {p: referencia.estatisticas_produto(b[p], br[p]) for p in b.columns},
+        "efeito_ponderacao": referencia.efeito_ponderacao(d.painel),
+        "postos_media_2013": float(referencia.cobertura(d.painel)["gasolina"].iloc[:12].mean()),
+        "postos_media_12m": float(referencia.cobertura(d.painel)["gasolina"].dropna().iloc[-12:].mean()),
         "paridade_etanol": metricas.participacao_paridade(razao).to_dict(),
         "paridade_hoje": sorted(razao.loc[ultimo][razao.loc[ultimo] <= config.LIMITE_PARIDADE_ETANOL].index),
         "dispersao_gasolina_atual": {
@@ -124,8 +130,33 @@ def montar_dashboard(d: Dados, resumo: dict) -> dict:
         "dispersao": _lista(metricas.dispersao_regional(gas), meses, 4),
         "sazonalidade": saz,
         "icms": _dados_its(d),
+        "anual": _anual(d),
+        "regioes": {
+            p: {reg: _lista(tab[reg], meses) for reg in tab.columns}
+            for p, tab in referencia.medias_regionais(d.painel).items()
+        },
+        "ufs": referencia.tabela_ufs(d.painel),
+        "cobertura": {p: _lista(s, meses, 0) for p, s in referencia.cobertura(d.painel).items()},
+        "arquivoAnp": config.ARQ_ANP.name,
         "resumo": resumo,
     }
+
+
+def _anual(d: Dados) -> list[dict]:
+    tab = referencia.tabela_anual(d.brasil, ingestao.ler_ipca())
+    linhas = []
+    for ano, linha in tab.iterrows():
+        item = {"ano": int(ano), "meses": int(linha["meses"]), "ipca": _num(linha["ipca_ano"], 4)}
+        for p in config.PRODUTOS.values():
+            item[p] = _num(linha[p], 3)
+            item[f"{p}_var"] = _num(linha[f"{p}_var"], 4)
+            item[f"{p}_var_real"] = _num(linha[f"{p}_var_real"], 4)
+        linhas.append(item)
+    return linhas
+
+
+def _num(v, casas):
+    return None if pd.isna(v) else round(float(v), casas)
 
 
 def _dados_its(d: Dados) -> dict:

@@ -26,7 +26,7 @@ def volatilidade_por_regime(precos: pd.DataFrame) -> pd.DataFrame:
     linhas = []
     for nome, ini, fim in config.REGIMES_PRECO:
         fatia = precos.loc[pd.Period(ini, "M") : (pd.Period(fim, "M") if fim else None)]
-        linha = {"regime": nome, "inicio": ini, "fim": fim or str(precos.index.max())}
+        linha = {"regime": nome, "inicio": ini, "fim": fim or str(precos.index.max()), "meses": len(fatia)}
         linha.update({c: volatilidade_anualizada(fatia[c].dropna()) for c in precos.columns})
         linhas.append(linha)
     return pd.DataFrame(linhas).set_index("regime")

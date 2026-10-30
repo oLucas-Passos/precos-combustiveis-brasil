@@ -69,15 +69,16 @@ src/combustiveis/
 ├── validacao.py       regras de qualidade (bloqueantes e avisos)
 ├── transformacao.py   deflação pelo IPCA, média ponderada, tabelas largas
 ├── metricas.py        volatilidade, sazonalidade, dispersão, paridade, ITS
+├── referencia.py      tabelas do site: estatísticas, médias anuais, regiões, UFs, cobertura
 └── pipeline.py        orquestra tudo e exporta data/processed e data/precos.json
-tests/                 26 testes (unitários com dados sintéticos + integração com dados reais)
+tests/                 33 testes (unitários com dados sintéticos + integração com dados reais)
 notebooks/analise.ipynb
 index.html, css/, js/  dashboard estático (Chart.js), publicado no GitHub Pages
 ```
 
 **Validação.** O pipeline para se encontrar UF não mapeada, chave `(mês, produto, UF)` duplicada, preço fora de faixa plausível ou média fora do intervalo [mín, máx] informado pela ANP. Meses sem pesquisa geram aviso.
 
-**Testes.** As métricas são testadas contra propriedades conhecidas: recuperação de um padrão sazonal injetado, estimação de uma quebra de nível sintética de −20% na ITS, ausência de quebra em série sem intervenção, ponderação da média nacional e deflação. Cobertura de 91%.
+**Testes.** As métricas são testadas contra propriedades conhecidas: recuperação de um padrão sazonal injetado, estimação de uma quebra de nível sintética de −20% na ITS, ausência de quebra em série sem intervenção, ponderação da média nacional e deflação. Cobertura de 93%.
 
 ## Como reproduzir
 

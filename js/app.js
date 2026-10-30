@@ -28,6 +28,7 @@ const graficos = {};
 const estado = {
   escala: 'real', evo: ['gasolina', 'etanol', 'diesel'], its: 'gasolina',
   escalaUf: 'nominal', prodUf: 'gasolina', ufs: ['SP', 'RJ', 'MG', 'BA', 'AM'],
+  anual: 'gasolina', regiao: 'gasolina', ordemUfs: { chave: 'preco', dir: -1 },
 };
 
 // Linhas verticais numeradas para os eventos e faixa sombreada para o período de paridade de importação.
@@ -453,6 +454,188 @@ function seletorEstados() {
   });
 }
 
+
+// Tabelas guardadas para exportar em CSV: { cabecalho: [...], linhas: [[...]] }
+const tabelasCsv = {};
+
+function baixarCsv(nome) {
+  const t = tabelasCsv[nome];
+  if (!t) return;
+  const celula = v => {
+    if (v == null) return '';
+    if (typeof v === 'number') return String(v).replace('.', ',');
+    const txt = String(v);
+    return /[;"\n]/.test(txt) ? `"${txt.replace(/"/g, '""')}"` : txt;
+  };
+  const csv = [t.cabecalho, ...t.linhas].map(l => l.map(celula).join(';')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `combustiveis-${nome}-${D.meses.at(-1)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+
+const arred = (v, d) => (v == null ? null : Math.round(v * 10 ** d) / 10 ** d);
+
+function tabelaResumo() {
+  const e = R.estatisticas;
+  const prods = Object.keys(PRODUTOS);
+  const linhas = [
+    ['Preço atual', p => reais(e[p].atual), p => arred(e[p].atual, 3)],
+    ['Média dos últimos 12 meses', p => reais(e[p].media_12m), p => arred(e[p].media_12m, 3)],
+    ['Variação em 1 mês', p => pct(e[p].var_1m, 1), p => arred(e[p].var_1m, 4)],
+    ['Variação em 12 meses', p => pct(e[p].var_12m, 1), p => arred(e[p].var_12m, 4)],
+    ['Variação em 5 anos', p => pct(e[p].var_60m, 1), p => arred(e[p].var_60m, 4)],
+    ['Variação desde jan/2013 (nominal)', p => pct(e[p].var_total_nominal, 1), p => arred(e[p].var_total_nominal, 4)],
+    ['Variação desde jan/2013 (real)', p => pct(e[p].var_total_real, 1), p => arred(e[p].var_total_real, 4)],
+    ['Crescimento médio ao ano (nominal)', p => pct(e[p].cagr_nominal, 2), p => arred(e[p].cagr_nominal, 5)],
+    ['Crescimento médio ao ano (real)', p => pct(e[p].cagr_real, 2), p => arred(e[p].cagr_real, 5)],
+    ['Menor preço nominal', p => `${reais(e[p].min_nominal[1])}<span class="sub-info">${mesAno(e[p].min_nominal[0])}</span>`, p => arred(e[p].min_nominal[1], 3)],
+    ['Maior preço nominal', p => `${reais(e[p].max_nominal[1])}<span class="sub-info">${mesAno(e[p].max_nominal[0])}</span>`, p => arred(e[p].max_nominal[1], 3)],
+    ['Menor preço real', p => `${reais(e[p].min_real[1])}<span class="sub-info">${mesAno(e[p].min_real[0])}</span>`, p => arred(e[p].min_real[1], 3)],
+    ['Maior preço real', p => `${reais(e[p].max_real[1])}<span class="sub-info">${mesAno(e[p].max_real[0])}</span>`, p => arred(e[p].max_real[1], 3)],
+    ['Volatilidade anual (2013 a hoje)', p => pct(e[p].volatilidade_anual, 1, false), p => arred(e[p].volatilidade_anual, 4)],
+    ['Meses com dado', p => String(e[p].meses), p => e[p].meses],
+  ];
+  $('tblResumo').innerHTML = `<thead><tr><th></th>${prods.map(p => `<th>${PRODUTOS[p].nome}<span class="sub-info">R$${PRODUTOS[p].un}</span></th>`).join('')}</tr></thead><tbody>`
+    + linhas.map(([rot, f]) => `<tr><td class="rotulo">${rot}</td>${prods.map(p => `<td>${f(p)}</td>`).join('')}</tr>`).join('') + '</tbody>';
+  tabelasCsv.resumo = { cabecalho: ['indicador', ...prods], linhas: linhas.map(([rot, , v]) => [rot, ...prods.map(v)]) };
+  tabelasCsv.resumo.linhas.push(['mes_mais_recente', ...prods.map(() => D.meses.at(-1))]);
+  $('ipcaTotal').textContent = pct(R.ipca_acumulado, 1, false);
+  $('ipca12').textContent = pct(R.ipca_ultimos_12m, 1, false);
+}
+
+function tabelaAnual() {
+  const p = estado.anual;
+  const linhas = D.anual;
+  const ultimo = linhas.at(-1);
+  $('mesesUltimoAno').textContent = `${ultimo.ano} tem ${ultimo.meses} meses`;
+  const classe = v => (v == null ? '' : v > 0 ? 'sobe' : 'desce');
+  if (p === 'todos') {
+    const prods = Object.keys(PRODUTOS);
+    $('tblAnual').innerHTML = `<thead><tr><th>Ano</th>${prods.map(k => `<th>${PRODUTOS[k].curto}</th>`).join('')}<th>IPCA no ano</th></tr></thead><tbody>`
+      + linhas.map(l => `<tr><td>${l.ano}${l.meses < 12 ? ' *' : ''}</td>${prods.map(k => `<td>${reais(l[k])}</td>`).join('')}<td>${pct(l.ipca, 2, false)}</td></tr>`).join('') + '</tbody>';
+  } else {
+    $('tblAnual').innerHTML = `<thead><tr><th>Ano</th><th>Preço médio</th><th>Variação nominal</th><th>Variação real</th><th>IPCA no ano</th></tr></thead><tbody>`
+      + linhas.map(l => `<tr><td>${l.ano}${l.meses < 12 ? ' *' : ''}</td><td>${reais(l[p])}</td><td class="${classe(l[p + '_var'])}">${pct(l[p + '_var'], 1)}</td><td class="${classe(l[p + '_var_real'])}">${pct(l[p + '_var_real'], 1)}</td><td>${pct(l.ipca, 2, false)}</td></tr>`).join('') + '</tbody>';
+  }
+  const prods = Object.keys(PRODUTOS);
+  tabelasCsv.anual = {
+    cabecalho: ['ano', 'meses', ...prods.flatMap(k => [k, `${k}_var_nominal`, `${k}_var_real`]), 'ipca_ano'],
+    linhas: linhas.map(l => [l.ano, l.meses, ...prods.flatMap(k => [l[k], l[k + '_var'], l[k + '_var_real']]), l.ipca]),
+  };
+}
+
+function tabelaVolatilidade() {
+  const v = R.volatilidade_regime;
+  const nomes = { 'Preço administrado': 'Até set/2016', 'Paridade de importação (PPI)': 'Out/2016 a abr/2023', 'Nova política comercial': 'Desde mai/2023' };
+  $('tblVol').innerHTML = '<thead><tr><th>Período</th><th>Meses</th><th>Gasolina</th><th>Etanol</th><th>Diesel S10</th></tr></thead><tbody>'
+    + Object.entries(v).map(([k, x]) => `<tr><td>${nomes[k] || k}</td><td>${x.meses}</td><td>${pct(x.gasolina, 1, false)}</td><td>${pct(x.etanol, 1, false)}</td><td>${pct(x.diesel, 1, false)}</td></tr>`).join('') + '</tbody>';
+}
+
+function tabelaSazonalidade() {
+  const e = D.sazonalidade.etanol, g = D.sazonalidade.gasolina;
+  const fmt = r => `${(r.efeito_pct > 0 ? '+' : '') + num(r.efeito_pct, 2)}%`;
+  const ic = r => `${num(r.efeito_pct - 1.96 * r.erro_padrao, 2)} a ${num(r.efeito_pct + 1.96 * r.erro_padrao, 2)}`;
+  $('tblSaz').innerHTML = '<thead><tr><th>Mês</th><th>Etanol</th><th>Intervalo de 95%</th><th>Gasolina</th><th>Intervalo de 95%</th><th>Anos</th></tr></thead><tbody>'
+    + e.map((r, i) => `<tr><td>${MESES_LONGOS[r.m - 1]}</td><td>${fmt(r)}</td><td>${ic(r)}</td><td>${fmt(g[i])}</td><td>${ic(g[i])}</td><td>${r.n}</td></tr>`).join('') + '</tbody>';
+}
+
+function calculadora(preencher) {
+  if (preencher) {
+    const uf = $('selUf').value;
+    $('cGas').value = D.ufs.gasolina[uf].preco.toFixed(2);
+    $('cEta').value = D.ufs.etanol[uf].preco.toFixed(2);
+  }
+  const gas = parseFloat($('cGas').value), eta = parseFloat($('cEta').value);
+  const km = parseFloat($('cKm').value), rend = parseFloat($('cRend').value) / 100, dist = parseFloat($('cDist').value) || 0;
+  if (!(gas > 0 && eta > 0 && km > 0 && rend > 0)) { $('cResultado').textContent = 'Preencha os campos com valores maiores que zero.'; return; }
+  const kmEta = km * rend;
+  const custoGas = gas / km, custoEta = eta / kmEta;
+  const limite = gas * rend;
+  const melhor = custoEta < custoGas ? 'etanol' : 'gasolina';
+  const economia = Math.abs(custoGas - custoEta) * dist;
+  $('cResultado').innerHTML = `Com gasolina o carro faz ${num(km, 1)} km/l e custa <b>${reais(custoGas, 3)} por km</b>. Com etanol faz ${num(kmEta, 1)} km/l e custa <b>${reais(custoEta, 3)} por km</b>. `
+    + `Compensa abastecer com <b>${melhor}</b>`
+    + (dist > 0 ? `, uma economia de ${reais(economia)} a cada ${num(dist, 0)} km. ` : '. ')
+    + `Com essa gasolina, o etanol vale a pena até ${reais(limite)} o litro (razão atual: ${pct(eta / gas, 1, false)}).`;
+}
+
+function regioes() {
+  const p = estado.regiao, fonte = D.regioes[p];
+  const nomes = Object.keys(fonte);
+  const cores = ['#c2410c', '#1864ab', '#2b8a3e', '#6741d9', '#e67700'];
+  desenhar('reg', 'chRegiao', {
+    type: 'line',
+    data: { labels: D.meses.map(mesCurto), datasets: nomes.map((r, i) => linha(r.replace('Centro Oeste', 'Centro-Oeste'), fonte[r], cores[i], { borderWidth: 1.6 })) },
+    options: opcoes(),
+  });
+}
+
+function coberturaAmostra() {
+  const ef = R.efeito_ponderacao;
+  $('notaCobertura').textContent = `Total de postos pesquisados por mês, somando os 27 estados. A amostra caiu de cerca de ${num(Math.round(R.postos_media_2013 / 1000), 0)} mil postos por mês em 2013 para cerca de ${num(Math.round(R.postos_media_12m / 1000), 0)} mil nos últimos 12 meses, com quedas fortes no fim de 2015, no segundo semestre de 2017, na volta da pesquisa em outubro de 2020 e no fim de 2022. A ANP não fez a pesquisa em setembro de 2020; esse mês fica sem valor. Como a média nacional é ponderada pelos postos de cada mês, testei o mesmo cálculo com pesos fixos por estado: a maior diferença foi de ${reais(ef.max_diferenca)} por litro de gasolina (${mesAno(ef.mes_max)}) e a média, de ${reais(ef.diferenca_media, 3)}. A alta desde 2013 fica em ${pct(ef.var_total_pesos_fixos, 1)} com pesos fixos, contra ${pct(R.estatisticas.gasolina.var_total_nominal, 1)} com pesos mensais.`;
+  const op = opcoes({ eixoY: v => num(v, 0), dica: v => `${num(v, 0)} postos` });
+  desenhar('cob', 'chCobertura', {
+    type: 'line',
+    data: { labels: D.meses.map(mesCurto), datasets: ['gasolina', 'etanol', 'diesel'].map(p => linha(PRODUTOS[p].curto, D.cobertura[p], cor(p), { borderWidth: 1.4, spanGaps: false })) },
+    options: op,
+  });
+}
+
+function coeficientesIcms() {
+  const p = estado.its, c = R.its_icms_detalhes[p];
+  const nomes = { constante: 'Constante', tendencia: 'Tendência (por mês)', degrau: 'Degrau em jul/2022', mudanca_tendencia: 'Mudança de tendência' };
+  const pv = v => (v < 0.001 ? '< 0,001' : num(v, 3));
+  $('tblCoef').innerHTML = '<thead><tr><th>Termo</th><th>Coeficiente</th><th>Erro padrão</th><th>p-valor</th></tr></thead><tbody>'
+    + Object.entries(c.coeficientes).map(([k, x]) => `<tr><td>${nomes[k]}</td><td>${num(x.coef, 4)}</td><td>${num(x.erro_padrao, 4)}</td><td>${pv(x.p_valor)}</td></tr>`).join('')
+    + `<tr><td>R²</td><td>${num(c.r2, 3)}</td><td></td><td></td></tr><tr><td>R² ajustado</td><td>${num(c.r2_ajustado, 3)}</td><td></td><td></td></tr>`
+    + `<tr><td>Durbin-Watson</td><td>${num(c.durbin_watson, 2)}</td><td></td><td></td></tr><tr><td>Observações</td><td>${c.n}</td><td></td><td></td></tr></tbody>`;
+  $('notaCoef').textContent = `${PRODUTOS[p].nome}: variável dependente é o logaritmo do preço real. Antes da lei o preço subia ${num(c.tendencia_pre_pct_mes, 2)}% ao mês; depois passou a ${num(c.tendencia_pos_pct_mes, 2)}% ao mês. Durbin-Watson abaixo de 2 indica autocorrelação positiva, por isso os erros padrão são de Newey-West.`;
+}
+
+function tabelaUfs() {
+  const p = estado.prodUf, dados = D.ufs[p];
+  const colunas = [
+    { k: 'uf', t: 'UF', f: r => r.uf },
+    { k: 'nome', t: 'Estado', f: r => r.nome },
+    { k: 'regiao', t: 'Região', f: r => r.regiao },
+    { k: 'preco', t: 'Preço médio', f: r => reais(r.preco) },
+    { k: 'min', t: 'Mínimo', f: r => reais(r.min) },
+    { k: 'max', t: 'Máximo', f: r => reais(r.max) },
+    { k: 'desvio', t: 'Desvio padrão', f: r => reais(r.desvio, p === 'glp' ? 2 : 3) },
+    { k: 'postos', t: 'Postos', f: r => num(r.postos, 0) },
+    { k: 'var_12m', t: '12 meses', f: r => pct(r.var_12m, 1) },
+    { k: 'var_real_total', t: 'Real desde 2013', f: r => pct(r.var_real_total, 1) },
+  ];
+  if (p === 'gasolina') colunas.push({ k: 'etanol_max', t: 'Etanol compensa até', f: r => reais(r.etanol_max) });
+  if (p === 'etanol') colunas.push({ k: 'razao', t: '% da gasolina', f: r => pct(r.razao, 1, false) }, { k: 'paridade_historica', t: 'Meses em que compensou', f: r => pct(r.paridade_historica, 0, false) });
+
+  const linhas = Object.entries(dados).map(([uf, x]) => ({ uf, nome: D.estados[uf].nome, regiao: D.estados[uf].regiao.replace('Centro Oeste', 'Centro-Oeste'), ...x }));
+  const { chave, dir } = estado.ordemUfs;
+  linhas.sort((a, b) => {
+    const va = a[chave], vb = b[chave];
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * dir;
+  });
+  const tbl = $('tblUfs');
+  const texto = k => (['uf', 'nome', 'regiao'].includes(k) ? ' class="txt"' : '');
+  tbl.innerHTML = `<thead><tr>${colunas.map(c => `<th data-k="${c.k}"${texto(c.k)}${c.k === chave ? ` aria-sort="${dir > 0 ? 'ascending' : 'descending'}"` : ''}>${c.t}</th>`).join('')}</tr></thead><tbody>`
+    + linhas.map(r => `<tr>${colunas.map(c => `<td${texto(c.k)}>${c.f(r)}</td>`).join('')}</tr>`).join('') + '</tbody>';
+  tbl.querySelectorAll('th').forEach(th => th.addEventListener('click', () => {
+    const k = th.dataset.k;
+    estado.ordemUfs = { chave: k, dir: estado.ordemUfs.chave === k ? -estado.ordemUfs.dir : (['uf', 'nome', 'regiao'].includes(k) ? 1 : -1) };
+    tabelaUfs();
+  }));
+  tabelasCsv.ufs = {
+    cabecalho: ['mes', 'produto', ...colunas.map(c => c.k)],
+    linhas: linhas.map(r => [D.meses.at(-1), p, ...colunas.map(c => (typeof r[c.k] === 'number' ? arred(r[c.k], 4) : r[c.k]))]),
+  };
+}
+
 // Garante que os gráficos acompanhem o tamanho do container quando a janela muda.
 function observarTamanho() {
   let espera;
@@ -477,6 +660,9 @@ async function iniciar() {
 
   textos();
   indicadores();
+  tabelaResumo();
+  document.querySelectorAll('[data-arquivo]').forEach(e => (e.textContent = D.arquivoAnp));
+  document.querySelectorAll('[data-csv]').forEach(b => b.addEventListener('click', () => baixarCsv(b.dataset.csv)));
 
   botoes('segEscala', [['real', 'Real'], ['nominal', 'Nominal']], () => estado.escala, v => { estado.escala = v; evolucao(); });
   botoes('segProdutoEvo', ['gasolina', 'etanol', 'diesel'].map(p => [p, PRODUTOS[p].curto]), () => estado.evo, v => {
@@ -487,27 +673,39 @@ async function iniciar() {
   }, true);
   evolucao();
 
+  botoes('segAnual', [...Object.entries(PRODUTOS).map(([p, i]) => [p, i.curto]), ['todos', 'Todos']], () => estado.anual, v => { estado.anual = v; tabelaAnual(); });
+  tabelaAnual();
+
   volatilidade();
+  tabelaVolatilidade();
   sazonalidade();
+  tabelaSazonalidade();
 
   const sel = $('selUf');
   sel.innerHTML = Object.entries(D.estados)
     .sort((a, b) => a[1].nome.localeCompare(b[1].nome))
     .map(([uf, e]) => `<option value="${uf}"${uf === 'SP' ? ' selected' : ''}>${e.nome}</option>`).join('');
-  sel.addEventListener('change', etanolPorEstado);
+  sel.addEventListener('change', () => { etanolPorEstado(); calculadora(true); });
   etanolPorEstado();
+  ['cGas', 'cEta', 'cKm', 'cRend', 'cDist'].forEach(id => $(id).addEventListener('input', () => calculadora(false)));
+  calculadora(true);
   etanolGeral();
 
   dispersao();
+  botoes('segRegiao', Object.entries(PRODUTOS).map(([p, i]) => [p, i.curto]), () => estado.regiao, v => { estado.regiao = v; regioes(); });
+  regioes();
 
-  botoes('segIts', ['gasolina', 'etanol', 'diesel'].map(p => [p, PRODUTOS[p].curto]), () => estado.its, v => { estado.its = v; icms(); });
+  botoes('segIts', ['gasolina', 'etanol', 'diesel'].map(p => [p, PRODUTOS[p].curto]), () => estado.its, v => { estado.its = v; icms(); coeficientesIcms(); });
   icms();
+  coeficientesIcms();
 
   botoes('segEscalaUf', [['nominal', 'Nominal'], ['real', 'Real']], () => estado.escalaUf, v => { estado.escalaUf = v; ranking(); comparar(); });
-  botoes('segProdutoUf', Object.entries(PRODUTOS).map(([p, i]) => [p, i.curto]), () => estado.prodUf, v => { estado.prodUf = v; ranking(); comparar(); });
+  botoes('segProdutoUf', Object.entries(PRODUTOS).map(([p, i]) => [p, i.curto]), () => estado.prodUf, v => { estado.prodUf = v; ranking(); comparar(); tabelaUfs(); });
   seletorEstados();
   ranking();
   comparar();
+  tabelaUfs();
+  coberturaAmostra();
   observarTamanho();
 }
 
