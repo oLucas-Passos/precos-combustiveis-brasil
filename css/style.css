@@ -78,7 +78,8 @@ h3 { margin: 18px 0 8px; font-size: 14.5px; font-weight: 600; color: var(--texto
 .sobe { color: var(--ruim); font-weight: 600; }
 .desce { color: var(--bom); font-weight: 600; }
 
-.grafico { position: relative; height: 300px; }
+.grafico { position: relative; height: 300px; overflow: hidden; }
+.grafico canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
 .grafico.alto { height: 380px; }
 .grafico.ranking-etanol { height: 520px; }
 .grafico.ranking-uf { height: 600px; }

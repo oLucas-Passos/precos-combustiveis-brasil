@@ -46,12 +46,12 @@ const pluginEventos = {
     let anterior = -Infinity, nivel = 0;
     (op.eventos || []).forEach((e, i) => {
       const px = pos(e.mes);
-      nivel = px - anterior < 19 ? nivel + 1 : 0;
+      nivel = px - anterior < 18 ? nivel + 1 : 0;
       anterior = px;
-      const cy = area.top + 8 + nivel * 19;
+      const cy = area.top - 11 - nivel * 18;
       ctx.strokeStyle = cssVar('--texto-3');
       ctx.setLineDash([3, 3]);
-      ctx.beginPath(); ctx.moveTo(px, op.numerar ? cy + 8 : area.top); ctx.lineTo(px, area.bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px, area.top); ctx.lineTo(px, area.bottom); ctx.stroke();
       ctx.setLineDash([]);
       if (op.numerar) {
         ctx.fillStyle = cssVar('--texto-2');
@@ -179,7 +179,9 @@ function evolucao() {
   const ppi = D.regimes.find(r => r.inicio === '2016-10');
   const op = opcoes();
   op.plugins.eventos = { eventos: D.eventos, faixa: [ppi.inicio, ppi.fim], numerar: true };
-  op.layout = { padding: { top: 6 } };
+  const largura = $('chEvolucao').parentElement.clientWidth;
+  op.layout = { padding: { top: largura < 560 ? 66 : largura < 1000 ? 50 : 32 } };
+  op.plugins.legend.position = 'bottom';
   desenhar('evo', 'chEvolucao', {
     type: 'line',
     data: { labels: D.meses.map(mesCurto), datasets: estado.evo.map(p => linha(PRODUTOS[p].nome, fonte[p], cor(p))) },
@@ -248,7 +250,7 @@ function sazonalidade() {
   const e = D.sazonalidade.etanol;
   const alto = e.reduce((a, b) => (b.efeito_pct > a.efeito_pct ? b : a));
   const baixo = e.reduce((a, b) => (b.efeito_pct < a.efeito_pct ? b : a));
-  $('txtSaz').textContent = `Sim. Tirando a tendência de longo prazo, o etanol costuma ficar ${num(alto.efeito_pct, 1)}% mais caro em ${MESES_LONGOS[alto.m - 1]} e ${num(Math.abs(baixo.efeito_pct), 1)}% mais barato em ${MESES_LONGOS[baixo.m - 1]}. Isso bate com o calendário da cana no Centro-Sul: a entressafra vai de dezembro a março e a safra, de abril a novembro. A gasolina não tem um padrão parecido. As barras pretas mostram o intervalo de 95%.`;
+  $('txtSaz').textContent = `Sim. Tirando a tendência de longo prazo, o etanol costuma ficar ${num(alto.efeito_pct, 1)}% mais caro em ${MESES_LONGOS[alto.m - 1]} e ${num(Math.abs(baixo.efeito_pct), 1)}% mais barato em ${MESES_LONGOS[baixo.m - 1]}. Isso bate com o calendário da cana no Centro-Sul: a entressafra vai de dezembro a março e a safra, de abril a novembro. A gasolina não tem um padrão parecido. O traço vertical em cada barra é o intervalo de 95%.`;
 }
 
 const razaoEtanol = uf => D.series.etanol[uf].map((v, i) => {
@@ -451,6 +453,20 @@ function seletorEstados() {
   });
 }
 
+// Garante que os gráficos acompanhem o tamanho do container quando a janela muda.
+function observarTamanho() {
+  let espera;
+  const ajustar = () => {
+    clearTimeout(espera);
+    espera = setTimeout(() => Object.values(graficos).forEach(g => g.resize()), 120);
+  };
+  window.addEventListener('resize', ajustar);
+  if ('ResizeObserver' in window) {
+    const obs = new ResizeObserver(ajustar);
+    document.querySelectorAll('.grafico').forEach(el => obs.observe(el));
+  }
+}
+
 async function iniciar() {
   const resp = await fetch('data/precos.json');
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -492,6 +508,7 @@ async function iniciar() {
   seletorEstados();
   ranking();
   comparar();
+  observarTamanho();
 }
 
 iniciar().catch(err => {
